@@ -26,11 +26,17 @@
 
 #import "CRLAppDelegate.h"
 
+@import Bugsee;
+
 @implementation CRLAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  return YES;
+    [Bugsee launchWithToken:@"88470f52-c221-4d1e-ae56-177804c91c61" andOptions:@{
+                                                                                 BugseeVideoEnabledKey: @NO
+                                                                                 }];
+
+    return YES;
 }
 
 @end
