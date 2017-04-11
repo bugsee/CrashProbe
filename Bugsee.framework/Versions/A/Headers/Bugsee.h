@@ -32,9 +32,9 @@ if (!condition) {[Bugsee logAssert:description withLocation:[NSString stringWith
 -(void) bugseeFilterNetworkEvent:(nonnull BugseeNetworkEvent *)event completionHandler:(nonnull BugseeNetworkFilterDecisionBlock)decisionBlock;
 
 /**
- *  This delegate allows you, to attach 3 files less than 1 MB each.
+ *  This delegate allows you, to attach 3 files less than 1 MB each to a report.
  *
- *  @param bugsee current bugsee instance
+ *  @param report       report about to be sent
  *  @return pass array of attachments here.
  */
 -(nonnull NSArray<BugseeAttachment* >*) bugseeAttachmentsForReport:(nonnull BugseeReport *)report;

@@ -1,38 +1,266 @@
-## Introduction
+# Bugsee
 
-[CrashProbe](http://crashprobe.com/) provides a set of test crashes that can be used to test crash reporting SDKs and symbolication implementations on iOS and OS X.
 
-The project has been developed using Xcode 5.1.1 and has been tested with OS X 10.9.2 and iOS 7.1.1.
+Bugsee is a mobile SDK that adds crucial information to your bug and crash reports. Bugsee reports include video of user actions, network traffic, console logs and many other important traces from your app. Now you know what exactly led to the unexpected behavior.
 
-## Setup
+Sign up for a service at [https://www.bugsee.com](https://www.bugsee.com). 
 
-1. Clone this repository.
-2. Open the project in Xcode.
-3. Integrate your crash reporting SDK into the required platform target (`CrashProbe` for OS X and `CrashProbeiOS` for iOS).
-4. Build the app using the `Release` build configuration and install it on a device.
+## Installation
 
-   Either use `Archive` or `Build for Profiling` and copy the app bundle onto the device. Using `Debug` build configuration will result in different results due to disabled compiler optimizations.
-5. Start the app without the debugger being attached.
-6. Choose a crash and trigger it.
-7. Start the app again, the integrated SDK should now upload the crash report to its server.
-8. Go back to step 5. and process the next crash. Otherwise continue with step 9.
-9. Symbolicate the crash report(s).
-10. Compare the symbolicated crash report(s) with the data available on the [CrashProbe](http://crashprobe.com/) website.
+```bash
+pod 'Bugsee'
+```
 
-## Disclaimer
+Run the following commands to install the Pod:
 
-The suite of tests was developed by [Bit Stadium GmbH](http://hockeyapp.net/) for the [HockeyApp](http://hockeyapp.net) service.
+```bash
+pod install
+pod update Bugsee # This is important, install command does not guarantee you will get latest version
+```
 
-## Contributing
+Import Bugsee header file in your app delegate or the file you intend to initialize the framework from
 
-### Code of Conduct
+**Objective-C**
+```objective-c
+@import Bugsee;
+```
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+**Swift**
+```swift
+import Bugsee
+```
 
-### Contributor License
+## Initialization
 
-You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
+Locate your app delegate and initialize the framework in your *application:didFinishLaunchingWithOptions* method:
 
-## License
+**Objective-C**
+```objective-c
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // ...other initialization code
 
-This project is released under the MIT license.
+    [Bugsee launchWithToken:@"your_app_token"];
+
+    return YES;
+}
+```
+
+**Swift**
+```swift
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    // ...other initialization code
+
+    Bugsee.launch(token:"your_app_token")
+
+    return true
+}
+```
+
+## Configuration
+
+### Launching with options
+
+Bugsee behavior is very customizable, if default configuration is not satisfying your needs you can launch the SDK with additional parameters passed as a dictionary.
+
+**Objective-C**
+```objective-c
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // ...other initialization code
+
+    NSDictionary * options = @{
+           BugseeMaxRecordingTimeKey   : @60,  
+           BugseeShakeToReportKey      : BugseeTrue,
+           BugseeScreenshotToReportKey : BugseeTrue,
+           BugseeCrashReportKey        : BugseeTrue
+    };
+
+    [Bugsee launchWithToken:@"your_app_token" andOptions:options];
+
+    return YES;
+}
+```
+
+**Swift**
+```swift
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    // ...other initialization code
+
+    let options : [String: Any] =
+        [ BugseeMaxRecordingTimeKey   : 60,
+          BugseeShakeToReportKey      : false,
+          BugseeScreenshotToReportKey : true,
+          BugseeCrashReportKey        : true ]
+
+    Bugsee.launch(token: "your_app_token", options: options)
+
+    return true
+}
+```
+
+### Available Options
+|Key|Default value|Notes
+|---|---|---|
+|BugseeMaxRecordingTimeKey|@60|Maximum recording duration|
+|BugseeShakeToReportKey|NO|Shake gesture to trigger report|
+|BugseeScreenshotToReportKey|YES|Screenshot key to trigger report|
+|BugseeCrashReportKey|YES|Catch and report application crashes (\*\*)|
+
+\* Frame rate depends on a lot of factors including the overall load of the system, we are doing our best not to interfere with the performance of the application hence the frame rate of the video can not be guaranteed, this only sets the upper boundary (i.e its not going to be higher than 15 fps)
+
+\*\* IOS allows only one crash detector to be active at a time, if you insist on using an alternative solution for handling crashes, you might want to use this option and disable Bugsee from taking over.
+
+### Setting reporters email
+
+When you already have your users identified within your app, you might want to add their email automatically attached to the bug report. Bugsee provides API's for setting, getting and clearing the email.
+
+**Objective-C**
+```objective-c
+    // setting email
+    [Bugsee setEmail:@"name@example.com"]
+
+    // getting email, nil will be returned if email was never set
+    NSString *email = [Bugsee getEmail];
+
+    // clearing email
+    [Bugsee clearEmail];
+```
+
+**Swift**
+```swift
+    // setting email
+    Bugsee.setEmail("name@example.com")
+
+    // getting email, nil will be returned if email was never set
+    var email = Bugsee.getEmail();
+
+    // clearing email
+    Bugsee.clearEmail();
+```
+## Manual invocation
+
+### Report view
+
+In addition to detection of shake gesture or screenshot issue report view can be triggered programmatically:
+
+**Objective-C**
+```objective-c
+[Bugsee showReportController];
+
+// or pre-fill some fields, user will be able to modify them
+[Bugsee showReportControllerWithSummary:@"Some problem"
+          description:@""
+          severity:BugseeSeverityMedium];
+```
+
+**Swift**
+```swift
+// To stop video recording use   
+Bugsee.showReportController()
+
+// or pre-fill some fields, user will be able to modify them
+Bugsee.showReportController(summary: "Some problem",
+    description: "",
+    severity: BugseeSeverityMedium)
+```
+
+### Issue create
+
+You can build your own custom UI for collecting summary, description and severity from a user and use the following call to send it to Bugsee
+to upload.
+Note: You should not use it for reporting errors automatically from within code, use [Non-fatal errors](#non-fatal-errors) for this instead.
+
+**Objective-C**
+```objective-c
+[Bugsee uploadWithSummary:@"Upload from code"
+        description:@"Some description"
+        severity:BugseeSeverityMedium];
+```
+
+**Swift**
+```swift
+Bugsee.upload(summary: "Upload from code",
+        description: "Some description",
+        severity: BugseeSeverityMedium)
+```
+
+### Non-fatal errors
+
+It is possible to report non-fatal errors from code. These reports will get combined similar to crashes,
+and you will be provided with statistics and a break down by unique devices, IOS versions, etc.
+
+**Objective-C**
+```objective-c
+[Bugsee logError:[NSError errorWithDomain:@"com.example.errors.ServerIsDown"
+							code:10234 userInfo:@{
+								@"key1":@"value1",
+								@"key2": @"value2"}]];
+```
+
+**Swift**
+```swift
+Bugsee.logError(NSError(domain: "com.example.errors.ServerIsDown",
+						code: 10234,
+						userInfo: ["key1": "value1", "key2": "value2"]))
+```
+
+
+### Asserts
+
+You can also let Bugsee validate asserts and auto create isssues and upload them once the assert fails.
+
+```objective-c
+BUGSEE_ASSERT(balance > 0, @"Balance is wrong")
+```
+
+
+## User events
+
+User events can be attached to the report, events are identified by a string and can have an optional dictionary of parameters that will be stored and passed along with the report.
+
+**Objective-C**
+```objective-c
+	// Without any additional parameters
+    [Bugsee registerEvent:@"payment_processed"];
+
+    // ...our with additional custom parameters
+    [Bugsee registerEvent:@"payment_processed"
+               withParams:@{
+                	@"amount": @125,
+                	@"currency": 'USD'
+    	         }];
+```
+
+**Swift**
+```swift
+    // Without any additional parameters
+    Bugsee.event("payment_processed")
+
+    // ...our with additional custom parameters
+    Bugsee.event("payment_processed",
+      params:["amount": 125, "currency": "USD"])
+```
+
+## User traces
+
+User traces can be attached to the report, this may be useful when you want to trace how a specific variable or state changes over time right before the problem happens.
+
+There are two ways available to trace a property, manually setting a value or automatically setting an observer on a property of an object.
+
+**Objective-C**
+```objective-c
+    // Manually set value of @15 to property named "credit_balance"
+    // any time it changes
+    [Bugsee traceKey:@"credit_balance" withVaue:@15];  
+```
+
+**Swift**
+```swift
+    // Manually set value of @15 to property named "credit_balance"
+    // any time it changes
+    Bugsee.trace(key:"credit_balance", value:15)
+```
+
+
+Bugsee can be further customized and allows adding your own traces, events, logs etc., for a complete SDK documentation covering additional options and API's visit [https://docs.bugsee.com/](https://docs.bugsee.com/)
